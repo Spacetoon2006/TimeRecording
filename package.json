@@ -1,7 +1,7 @@
 {
   "name": "time-recording-app",
   "private": true,
-  "version": "1.2.0",
+  "version": "1.3.2",
   "type": "commonjs",
   "main": "electron/main.js",
   "scripts": {
@@ -14,7 +14,7 @@
     "rebuild-sqlite": "electron-rebuild -f -w better-sqlite3"
   },
   "dependencies": {
-    "better-sqlite3": "^11.0.0",
+    "better-sqlite3": "^12.6.2",
     "clsx": "^2.1.0",
     "date-fns": "^3.3.1",
     "electron-updater": "^6.8.3",
@@ -49,7 +49,7 @@
       "electron/**/*"
     ],
     "directories": {
-      "output": "release/v1.2.0"
+      "output": "release/v1.3.2"
     },
     "win": {
       "target": "nsis"

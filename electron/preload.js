@@ -33,5 +33,14 @@ contextBridge.exposeInMainWorld('electron', {
     onUpdateDownloadProgress: (cb) => ipcRenderer.on('update-download-progress', (_, pct) => cb(pct)),
     onUpdateDownloaded: (cb) => ipcRenderer.on('update-downloaded', (_, version) => cb(version)),
     onUpdateError: (cb) => ipcRenderer.on('update-error', (_, msg) => cb(msg)),
+
+    // v1.3.0 Enhanced Analytics
+    getBillableRatio: (params) => ipcRenderer.invoke('get-billable-ratio', params),
+    getLabourCost: (params) => ipcRenderer.invoke('get-labour-cost', params),
+    getParetoOrders: (params) => ipcRenderer.invoke('get-pareto-orders', params),
+    getOvertime: (params) => ipcRenderer.invoke('get-overtime', params),
+    getWowTrend: (params) => ipcRenderer.invoke('get-wow-trend', params),
+    getOrderPmBreakdown: (params) => ipcRenderer.invoke('get-order-pm-breakdown', params),
 });
+
 

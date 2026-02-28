@@ -64,10 +64,12 @@ function UpdateChecker() {
     );
 }
 
+import PersonalStats from './PersonalStats';
 
 export default function Dashboard({ user, onLogout }) {
     const [refreshKey, setRefreshKey] = useState(0);
     const [viewDate, setViewDate] = useState(new Date());
+    const [activeTab, setActiveTab] = useState('entries'); // 'entries' | 'stats'
 
     // Password Modal State
     const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
@@ -75,7 +77,7 @@ export default function Dashboard({ user, onLogout }) {
     const [isSelfChange, setIsSelfChange] = useState(true);
 
     const handleEntryAdded = () => {
-        // Increment key to trigger WeeklyView refresh
+        // Increment key to trigger WeeklyView and PersonalStats refresh
         setRefreshKey(prev => prev + 1);
     };
 
@@ -251,6 +253,24 @@ export default function Dashboard({ user, onLogout }) {
                     <h2 className="text-xl">Welcome, <span className="text-gradient">{user}</span></h2>
                     <p className="text-muted text-sm">Time Recording Dashboard</p>
                 </div>
+
+                <div style={{ display: 'flex', gap: '0.5rem', background: 'rgba(0,0,0,0.2)', padding: '0.2rem', borderRadius: '8px' }}>
+                    <button
+                        className={`btn ${activeTab === 'entries' ? 'btn-primary' : 'btn-text'}`}
+                        onClick={() => setActiveTab('entries')}
+                        style={{ fontSize: '0.8rem', padding: '0.4rem 0.8rem' }}
+                    >
+                        Time Entries
+                    </button>
+                    <button
+                        className={`btn ${activeTab === 'stats' ? 'btn-primary' : 'btn-text'}`}
+                        onClick={() => setActiveTab('stats')}
+                        style={{ fontSize: '0.8rem', padding: '0.4rem 0.8rem' }}
+                    >
+                        📈 Overview
+                    </button>
+                </div>
+
                 <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
                     <UpdateChecker />
                     <span style={{ fontSize: '0.72rem', color: '#475569', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '20px', padding: '0.2rem 0.6rem' }}>
@@ -262,40 +282,46 @@ export default function Dashboard({ user, onLogout }) {
             </header>
 
 
-            <div className="dashboard-grid">
-                {/* Left Column: Form */}
-                <div>
-                    <div className="card">
-                        <h3 className="card-title">New Entry</h3>
-                        <TimeEntryForm
+            {activeTab === 'stats' ? (
+                <div className="card" style={{ marginTop: '1rem' }}>
+                    <PersonalStats user={user} refreshTrigger={refreshKey} />
+                </div>
+            ) : (
+                <div className="dashboard-grid">
+                    {/* Left Column: Form */}
+                    <div>
+                        <div className="card">
+                            <h3 className="card-title">New Entry</h3>
+                            <TimeEntryForm
+                                user={user}
+                                onEntryAdded={handleEntryAdded}
+                                onDateSelect={handleDateChange}
+                            />
+                        </div>
+
+                        <div className="card" style={{ marginTop: '1.5rem' }}>
+                            <h3 className="card-title text-sm">Export</h3>
+                            <p className="text-muted text-sm mb-2">Export data for Excel.</p>
+                            <button
+                                onClick={handleExport}
+                                className="btn btn-text"
+                                style={{ border: '1px solid var(--glass-border)' }}
+                            >
+                                Download Excel (.xlsx)
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Right Column: Weekly View */}
+                    <div>
+                        <WeeklyView
                             user={user}
-                            onEntryAdded={handleEntryAdded}
-                            onDateSelect={handleDateChange}
+                            refreshTrigger={refreshKey}
+                            forcedDate={viewDate}
                         />
                     </div>
-
-                    <div className="card" style={{ marginTop: '1.5rem' }}>
-                        <h3 className="card-title text-sm">Export</h3>
-                        <p className="text-muted text-sm mb-2">Export data for Excel.</p>
-                        <button
-                            onClick={handleExport}
-                            className="btn btn-text"
-                            style={{ border: '1px solid var(--glass-border)' }}
-                        >
-                            Download Excel (.xlsx)
-                        </button>
-                    </div>
                 </div>
-
-                {/* Right Column: Weekly View */}
-                <div>
-                    <WeeklyView
-                        user={user}
-                        refreshTrigger={refreshKey}
-                        forcedDate={viewDate}
-                    />
-                </div>
-            </div>
+            )}
         </div>
     );
 }

@@ -517,10 +517,15 @@ ipcMain.handle('seed-mock-data', (event) => {
             const splits = Math.floor(Math.random() * 3) + 1;
 
             for (let i = 0; i < splits; i++) {
+              // FOR SEEDING: Some orders are "shared" to test cross-PM collaboration
+              // 30% chance to pick a "Global" order that many PMs work on
+              const isShared = Math.random() > 0.7;
+              const orderNr = isShared ? "990005" : orders[Math.floor(Math.random() * orders.length)];
+
               entriesToSave.push({
                 projectManager: pm,
                 date: dateStr,
-                orderNr: orders[Math.floor(Math.random() * orders.length)],
+                orderNr: orderNr,
                 duration: parseFloat((hoursToInject / splits).toFixed(1)),
                 dayType: "Werktag",
                 comment: "Auto-seeded mock data"
@@ -673,3 +678,130 @@ ipcMain.handle('get-pm-distribution', (event, { projectManager, startDate, endDa
     return { success: false, message: "Database query failed." };
   }
 });
+
+// ── NEW: Billable vs Non-Billable ratio per PM ───────────────────────────────
+ipcMain.handle('get-billable-ratio', (event, { startDate, endDate, excludeOrders }) => {
+  try {
+    let excl = '';
+    const params = [startDate, endDate];
+    if (excludeOrders && excludeOrders.length > 0) {
+      const ph = excludeOrders.map(() => '?').join(',');
+      excl = ` AND order_nr NOT IN (${ph})`;
+      params.push(...excludeOrders);
+    }
+    const rows = db.prepare(`
+      SELECT project_manager as name,
+             SUM(CASE WHEN order_nr = 'Absent' THEN duration ELSE 0 END)  AS absent,
+             SUM(CASE WHEN order_nr != 'Absent' THEN duration ELSE 0 END)  AS billable
+      FROM time_entries
+      WHERE date >= ? AND date <= ?${excl}
+      GROUP BY project_manager
+      ORDER BY project_manager
+    `).all(...params);
+    return { success: true, data: rows };
+  } catch (e) { return { success: false, message: e.message }; }
+});
+
+// ── NEW: Labour cost per order (hours only — rate applied in frontend) ────────
+ipcMain.handle('get-labour-cost', (event, { startDate, endDate, excludeOrders }) => {
+  try {
+    let excl = '';
+    const params = [startDate, endDate];
+    if (excludeOrders && excludeOrders.length > 0) {
+      const ph = excludeOrders.map(() => '?').join(',');
+      excl = ` AND order_nr NOT IN (${ph})`;
+      params.push(...excludeOrders);
+    }
+    const rows = db.prepare(`
+      SELECT order_nr as name, project_manager,
+             SUM(duration) AS hours
+      FROM time_entries
+      WHERE date >= ? AND date <= ? AND order_nr != 'Absent'${excl}
+      GROUP BY order_nr, project_manager
+      ORDER BY name, project_manager
+    `).all(...params);
+    return { success: true, data: rows };
+  } catch (e) { return { success: false, message: e.message }; }
+});
+
+// ── NEW: Pareto — top orders with cumulative % ────────────────────────────────
+ipcMain.handle('get-pareto-orders', (event, { startDate, endDate, excludeOrders }) => {
+  try {
+    let excl = '';
+    const params = [startDate, endDate];
+    if (excludeOrders && excludeOrders.length > 0) {
+      const ph = excludeOrders.map(() => '?').join(',');
+      excl = ` AND order_nr NOT IN (${ph})`;
+      params.push(...excludeOrders);
+    }
+    const rows = db.prepare(`
+      SELECT order_nr as name, SUM(duration) AS hours
+      FROM time_entries
+      WHERE date >= ? AND date <= ? AND order_nr != 'Absent'${excl}
+      GROUP BY order_nr
+      ORDER BY hours DESC
+      LIMIT 15
+    `).all(...params);
+    const total = rows.reduce((s, r) => s + r.hours, 0);
+    let cum = 0;
+    const data = rows.map(r => {
+      cum += r.hours;
+      return { ...r, cumPct: total > 0 ? Math.round((cum / total) * 100) : 0 };
+    });
+    return { success: true, data };
+  } catch (e) { return { success: false, message: e.message }; }
+});
+
+// ── NEW: Weekend / overtime hours per PM ──────────────────────────────────────
+ipcMain.handle('get-overtime', (event, { startDate, endDate, excludeOrders }) => {
+  try {
+    let excl = '';
+    const params = [startDate, endDate];
+    if (excludeOrders && excludeOrders.length > 0) {
+      const ph = excludeOrders.map(() => '?').join(',');
+      excl = ` AND order_nr NOT IN (${ph})`;
+      params.push(...excludeOrders);
+    }
+    const rows = db.prepare(`
+      SELECT project_manager as name,
+             SUM(CASE WHEN day_type IN ('Samstag','Sonntag') THEN duration ELSE 0 END) AS weekendHours,
+             SUM(duration) AS totalHours
+      FROM time_entries
+      WHERE date >= ? AND date <= ?${excl}
+      GROUP BY project_manager
+      ORDER BY weekendHours DESC
+    `).all(...params);
+    return { success: true, data: rows };
+  } catch (e) { return { success: false, message: e.message }; }
+});
+
+// ── NEW: Week-over-week trend (last 8 ISO weeks, company total) ───────────────
+ipcMain.handle('get-wow-trend', (event, { endDate }) => {
+  try {
+    const rows = db.prepare(`
+      SELECT strftime('%Y-W%W', date) AS weekKey,
+             SUM(duration) AS totalHours
+      FROM time_entries
+      WHERE date <= ? AND order_nr != 'Absent'
+      GROUP BY weekKey
+      ORDER BY weekKey DESC
+      LIMIT 8
+    `).all(endDate || new Date().toISOString().slice(0, 10));
+    return { success: true, data: rows.reverse() };
+  } catch (e) { return { success: false, message: e.message }; }
+});
+
+// ── NEW: Cross-PM breakdown for a single order ────────────────────────────────
+ipcMain.handle('get-order-pm-breakdown', (event, { orderNr, startDate, endDate }) => {
+  try {
+    const rows = db.prepare(`
+      SELECT project_manager as name, SUM(duration) AS value
+      FROM time_entries
+      WHERE order_nr = ? AND date >= ? AND date <= ?
+      GROUP BY project_manager
+      ORDER BY value DESC
+    `).all(orderNr, startDate, endDate);
+    return { success: true, data: rows };
+  } catch (e) { return { success: false, message: e.message }; }
+});
+
