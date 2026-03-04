@@ -1,7 +1,7 @@
 {
   "name": "time-recording-app",
   "private": true,
-  "version": "1.3.3",
+  "version": "1.3.4",
   "type": "commonjs",
   "main": "electron/main.js",
   "scripts": {
@@ -49,7 +49,7 @@
       "electron/**/*"
     ],
     "directories": {
-      "output": "release/v1.3.3"
+      "output": "release/v1.3.4"
     },
     "win": {
       "target": "nsis"
@@ -58,7 +58,7 @@
       "provider": "github",
       "owner": "Spacetoon2006",
       "repo": "TimeRecording",
-      "releaseType": "draft"
+      "releaseType": "release"
     }
   }
 }
