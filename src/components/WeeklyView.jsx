@@ -11,6 +11,7 @@ export default function WeeklyView({ user, refreshTrigger, forcedDate }) {
         }
     }, [forcedDate]);
 
+    const [deletingId, setDeletingId] = useState(null);
     const [entries, setEntries] = useState([]);
     const [weeklySum, setWeeklySum] = useState(0);
 
@@ -42,10 +43,9 @@ export default function WeeklyView({ user, refreshTrigger, forcedDate }) {
     };
 
     const handleDelete = async (id) => {
-        if (confirm('Delete this entry?')) {
-            await window.electron.deleteEntry(id);
-            fetchEntries();
-        }
+        await window.electron.deleteEntry(id);
+        setDeletingId(null);
+        fetchEntries();
     };
 
     const handlePrevWeek = () => setCurrentDate(addDays(currentDate, -7));
@@ -131,12 +131,20 @@ export default function WeeklyView({ user, refreshTrigger, forcedDate }) {
                                     </td>
 
                                     <td style={{ padding: '0.75rem' }}>
-                                        <button
-                                            onClick={() => handleDelete(entry.id)}
-                                            style={{ color: 'var(--danger)', background: 'none', border: 'none', cursor: 'pointer' }}
-                                        >
-                                            ×
-                                        </button>
+                                        {deletingId === entry.id ? (
+                                            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                                                <button onClick={() => handleDelete(entry.id)} style={{ color: 'var(--danger)', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 'bold' }}>Yes</button>
+                                                <button onClick={() => setDeletingId(null)} style={{ color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer' }}>No</button>
+                                            </div>
+                                        ) : (
+                                            <button
+                                                onClick={() => setDeletingId(entry.id)}
+                                                style={{ color: 'var(--danger)', background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.2rem', lineHeight: '1' }}
+                                                title="Delete Entry"
+                                            >
+                                                ×
+                                            </button>
+                                        )}
                                     </td>
                                 </tr>
                             ));

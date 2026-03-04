@@ -124,6 +124,20 @@ function initDB() {
     );
   `);
 
+  // --- Dynamic Migrations for Production Database ---
+  // If the shared DB was created with an older version, we must ensure new columns exist.
+  const tableInfo = db.prepare("PRAGMA table_info(time_entries)").all();
+  const columns = tableInfo.map(c => c.name);
+
+  if (!columns.includes('day_type')) {
+    console.log("Migrating: Adding 'day_type' column to time_entries...");
+    db.exec("ALTER TABLE time_entries ADD COLUMN day_type TEXT DEFAULT 'Werktag'");
+  }
+  if (!columns.includes('comment')) {
+    console.log("Migrating: Adding 'comment' column to time_entries...");
+    db.exec("ALTER TABLE time_entries ADD COLUMN comment TEXT");
+  }
+
   // Seed Users if empty
   const userCount = db.prepare('SELECT COUNT(*) as count FROM users').get().count;
   if (userCount === 0) {
