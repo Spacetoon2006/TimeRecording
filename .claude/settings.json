@@ -1,0 +1,14 @@
+{
+  "extraKnownMarketplaces": {
+    "thedotmack": {
+      "source": { "source": "github", "repo": "thedotmack/claude-mem" }
+    },
+    "omniroute-claude-plugin": {
+      "source": { "source": "github", "repo": "projectsaibg/omniroute-claude-plugin" }
+    }
+  },
+  "enabledPlugins": {
+    "claude-mem@thedotmack": true,
+    "omniroute@omniroute-claude-plugin": false
+  }
+}
